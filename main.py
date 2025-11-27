@@ -1,5 +1,6 @@
 from object import *
 import pygame
+import random
 
 # initialize
 pygame.init()
@@ -9,8 +10,7 @@ clock = pygame.time.Clock()
 
 waiting_to_start = True
 game_start = False
-
-
+the_end = False
 
 ## Make a Start Menu ##
 
@@ -62,13 +62,12 @@ Thrower_ants = pygame.transform.scale(Thrower_ants, (150, 150))
 Thrower_ants_rect = Thrower_ants.get_rect()
 Thrower_ants_rect.center = (250, 230)
 
-#showcase GameState.food
+# showcase GameState.food
 font = pygame.font.Font("assets/fond/MountainsOfChristmas/MountainsofChristmas-Bold.ttf", 70)
-#text_surface are defined in game loop
+# text_surface are defined in game loop because it needs to be refreshed
 text_rect = text_surface.get_rect()
 text_rect.topleft = (50, 50)
 
-lawn_sprites = pygame.sprite.Group()
 lawn_list = []
 for i in range(9):
     for j in range(4):
@@ -78,13 +77,19 @@ for i in range(9):
         # noinspection PyTypeChecker
         lawn_sprites.add(n)
 
-def draw_border(n):
+# state : the y_range of each row is (370, 530), (550, 710), (730, 890), (910, 1070)
+row_list = ['row1','row2','row3','row4']
+
+def draw_border(s):
     """draw the borders of each type of optional ants"""
-    pygame.draw.rect(screen, (255, 0, 0), n.inflate(2, 2),2)
+    pygame.draw.rect(screen, (255, 0, 0), s.inflate(2, 2),2)
+
+# To Set the interval for bee generation
+wave1_start_time = None
 
 while game_start:
 
-    #Get timestamp
+    # Get timestamp
     current_time = pygame.time.get_ticks()
 
     for event in pygame.event.get():
@@ -94,28 +99,44 @@ while game_start:
 
         mouse_pos = pygame.mouse.get_pos()
 
-        # switch the selected ants
-        if not(mouse_pos[0] < 1620 and mouse_pos[1] > 360):
-            if pygame.mouse.get_pressed()[0]:
-                if Harvester_ants_rect.collidepoint(mouse_pos):
-                    GameState.chosen_ants = Harvester
-                if Thrower_ants_rect.collidepoint(mouse_pos):
-                    GameState.chosen_ants = Thrower
+        if not GameState.game_win and not GameState.game_over:
 
-        # generate an ant on lawn by clicking
-        elif pygame.mouse.get_pressed()[0]:
-            for x in lawn_list:
-                if x.rect.collidepoint(mouse_pos) and GameState.chosen_ants == Harvester and  not x.have_ants  :
-                    if GameState.chosen_ants.food_cost <= GameState.food:
-                        GameState.food -= GameState.chosen_ants.food_cost
-                        x.have_ants = Harvester
-                        Harvesters.add(Harvester(x.rect.center))
-                elif x.rect.collidepoint(mouse_pos) and GameState.chosen_ants == Thrower and  not x.have_ants  :
-                    if GameState.chosen_ants.food_cost <= GameState.food:
-                        GameState.food -= GameState.chosen_ants.food_cost
-                        x.have_ants = Thrower
-                        Throwers.add(Thrower(x.rect.center))
+            # switch the selected ants
+            if not(mouse_pos[0] < 1620 and mouse_pos[1] > 360):
+                if pygame.mouse.get_pressed()[0]:
+                    if Harvester_ants_rect.collidepoint(mouse_pos):
+                        GameState.chosen_ants = Harvester
+                    if Thrower_ants_rect.collidepoint(mouse_pos):
+                        GameState.chosen_ants = Thrower
 
+            # generate an ant on lawn by clicking
+            elif pygame.mouse.get_pressed()[0]:
+                for x in lawn_list:
+                    if x.rect.collidepoint(mouse_pos) and GameState.chosen_ants == Harvester and  not x.have_ants  :
+                        if GameState.chosen_ants.food_cost <= GameState.food:
+                            GameState.food -= GameState.chosen_ants.food_cost
+                            x.have_ants = Harvester
+                            Harvesters.add(Harvester(x.rect.center))
+                    elif x.rect.collidepoint(mouse_pos) and GameState.chosen_ants == Thrower and  not x.have_ants  :
+                        if GameState.chosen_ants.food_cost <= GameState.food:
+                            GameState.food -= GameState.chosen_ants.food_cost
+                            x.have_ants = Thrower
+                            Throwers.add(Thrower(x.rect.center))
+
+    # wave 1
+    if current_time >= 15000:
+        if not wave1_start_time:
+            wave1_start_time = current_time
+        elif current_time - wave1_start_time > 5000:
+            n = row_list[random.randint(0,3)]
+            Bees_group.add(Bees(n))
+            wave1_start_time = current_time
+
+    #    elif GameState.game_win :
+
+        elif GameState.game_over:
+            game_start = False
+            the_end = True
 
 
     screen.blit(game_background, (0, 0))
@@ -123,11 +144,19 @@ while game_start:
     text_surface = font.render(f"FOOD : {GameState.food}", True, (255, 0, 0))
     screen.blit(text_surface, text_rect)
 
-    Harvesters.update(current_time)
+    pygame.draw.line(screen, (255, 0, 0), (0,360),(1980,360) )
 
     lawn_sprites.draw(screen)
     Harvesters.draw(screen)
+    Harvesters.update(current_time)
     Throwers.draw(screen)
+    Throwers.update(current_time)
+    Bees_group.draw(screen)
+    Bees_group.update()
+    food_group.draw(screen)
+    food_group.update()
+    bullet_group.draw(screen)
+    bullet_group.update()
 
     screen.blit(Harvester_ants, Harvester_ants_rect)
     if GameState.chosen_ants == Harvester:
@@ -137,13 +166,27 @@ while game_start:
     if GameState.chosen_ants == Thrower:
         draw_border(Thrower_ants_rect)
 
-    food_group.draw(screen)
-    food_group.update()
-
-    pygame.draw.line(screen, (255, 0, 0), (0,360),(1980,360) )
-
     pygame.display.flip()
     clock.tick(60)
 
+
+
+# end the game
+
+font = pygame.font.Font("assets/fond/MountainsOfChristmas/MountainsofChristmas-Bold.ttf", 300)
+text_surface = font.render("GAME   OVER", False, (255, 0, 0))
+text_rect = text_surface.get_rect()
+text_rect.center = (960, 540)
+
+while the_end:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            the_end = False
+
+    screen.fill((0, 0, 0))
+    screen.blit(text_surface, text_rect)
+
+    pygame.display.flip()
+    clock.tick(30)
 
 pygame.quit()
