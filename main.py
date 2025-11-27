@@ -57,16 +57,16 @@ Harvester_ants = pygame.transform.scale(Harvester_ants, (150, 150))
 Harvester_ants_rect = Harvester_ants.get_rect()
 Harvester_ants_rect.center = (100, 230)
 
-#create Harvester's group
-Harvesters = pygame.sprite.Group()
-
 Thrower_ants = pygame.image.load("assets/ants/Thrower.gif")
 Thrower_ants = pygame.transform.scale(Thrower_ants, (150, 150))
 Thrower_ants_rect = Thrower_ants.get_rect()
 Thrower_ants_rect.center = (250, 230)
 
-#create Thrower's group
-Throwers = pygame.sprite.Group()
+#showcase GameState.food
+font = pygame.font.Font("assets/fond/MountainsOfChristmas/MountainsofChristmas-Bold.ttf", 70)
+#text_surface are defined in game loop
+text_rect = text_surface.get_rect()
+text_rect.topleft = (50, 50)
 
 lawn_sprites = pygame.sprite.Group()
 lawn_list = []
@@ -75,6 +75,7 @@ for i in range(9):
         position = (5 + 180 * i, 365 + 180 * j)
         n = Lawn(position)
         lawn_list.append(n)
+        # noinspection PyTypeChecker
         lawn_sprites.add(n)
 
 def draw_border(n):
@@ -83,6 +84,8 @@ def draw_border(n):
 
 while game_start:
 
+    #Get timestamp
+    current_time = pygame.time.get_ticks()
 
     for event in pygame.event.get():
 
@@ -117,6 +120,10 @@ while game_start:
 
     screen.blit(game_background, (0, 0))
     screen.blit(fog, fog_rect)
+    text_surface = font.render(f"FOOD : {GameState.food}", True, (255, 0, 0))
+    screen.blit(text_surface, text_rect)
+
+    Harvesters.update(current_time)
 
     lawn_sprites.draw(screen)
     Harvesters.draw(screen)
@@ -129,6 +136,9 @@ while game_start:
     screen.blit(Thrower_ants, Thrower_ants_rect)
     if GameState.chosen_ants == Thrower:
         draw_border(Thrower_ants_rect)
+
+    food_group.draw(screen)
+    food_group.update()
 
     pygame.draw.line(screen, (255, 0, 0), (0,360),(1980,360) )
 

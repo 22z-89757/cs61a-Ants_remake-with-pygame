@@ -1,8 +1,9 @@
 import pygame
 
+
 class GameState:
 
-    food = 100
+    food = 5
     game_over = False
     game_win = False
     chosen_ants = None
@@ -42,6 +43,10 @@ class Thrower(Ants):
         self.image = pygame.transform.scale(self.image, (130, 130))
         self.rect = self.image.get_rect()
         self.rect.center = position
+        self.position = position
+
+#create Thrower's group
+Throwers = pygame.sprite.Group()
 
 
 class Harvester(Ants):
@@ -55,10 +60,21 @@ class Harvester(Ants):
         self.image = pygame.transform.scale(self.image, (130, 130))
         self.rect = self.image.get_rect()
         self.rect.center = position
+        self.plant_time = pygame.time.get_ticks()
+        self.position = position
 
-    @staticmethod
-    def get_food():
-        GameState.food += 1
+    #get food logic
+    def update(self,current_time):
+        #current_time was get in main game loop
+        if current_time - self.plant_time >= 7000:
+            GameState.food += 1
+            #refresh waiting time
+            self.plant_time = current_time
+            # noinspection PyTypeChecker
+            food_group.add(Food(self.position))
+
+#create Harvester's group
+Harvesters = pygame.sprite.Group()
 
 
 class Bees(Insect):
@@ -81,3 +97,28 @@ class Lawn(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (170, 170))
         self.rect = self.image.get_rect()
         self.rect.topleft = position
+
+class Food(pygame.sprite.Sprite):
+
+    def __init__(self,position):
+        super().__init__()
+        self.image = pygame.image.load("assets/food.png")
+        self.image = pygame.transform.scale(self.image, (60, 60))
+        #create a copy image .In order not to alter the original image
+        self.copy_image = self.image.copy()
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+        self.speed = 2
+        self.fade_speed = 5
+        #Completely opaque at the beginning
+        self.alpha = 255
+
+    def update(self):
+        self.rect.y -= self.speed
+        self.alpha -= self.fade_speed
+        self.copy_image = self.image.copy()
+        self.image.set_alpha(self.alpha)
+        if self.alpha <= 0:
+            self.kill()
+
+food_group = pygame.sprite.Group()
