@@ -1,8 +1,17 @@
+### Quick look:
+
+![game_play](assets/remake_gameplay.gif)
+
+
+<br/><br/><br/><br/>
+
 # <center><strong> 🐜 Ants-remake </strong></center>
 
 **<center>图片来源 : CS61A project —— Ants</center>**
 
 **<center>开发环境 : Python 3.x + Pygame</center>**
+
+
 
 ### 1.在开始之前，确保你的电脑已安装python并且已安装pygame库
 
