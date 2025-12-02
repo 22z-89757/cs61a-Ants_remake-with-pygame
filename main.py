@@ -87,6 +87,27 @@ def draw_border(s):
 # To Set the interval for bee generation
 wave1_start_time = None
 
+
+
+# draw cost badges for ants below the food display, keep them above the lawn/red line
+font = pygame.font.Font("assets/fond/MountainsOfChristmas/MountainsofChristmas-Bold.ttf", 36)
+
+def draw_cost_badge(center_x, top_y, name, cost):
+        # render cost text
+        txt = font.render(str(cost), True, (255, 255, 255))
+        label = font.render(name, True, (255, 217, 63))
+        rect1 = label.get_rect()
+        rect2 = txt.get_rect()
+        rect1.center = (center_x , top_y)
+        rect2.center = (center_x , top_y+30)
+        screen.blit(label, rect1)
+        screen.blit(txt, rect2)
+
+
+
+
+
+
 while game_start:
 
     # Get timestamp
@@ -143,6 +164,9 @@ while game_start:
     screen.blit(fog, fog_rect)
     text_surface = font.render(f"FOOD : {GameState.food}", True, (255, 0, 0))
     screen.blit(text_surface, text_rect)
+
+    draw_cost_badge(Harvester_ants_rect.centerx, 310, "Harvester", Harvester.food_cost)
+    draw_cost_badge(Thrower_ants_rect.centerx, 310, "Thrower", Thrower.food_cost)
 
     pygame.draw.line(screen, (255, 0, 0), (0,360),(1980,360) )
 
