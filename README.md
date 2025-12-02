@@ -13,15 +13,11 @@
 
 
 
-### 1.在开始之前，确保你的电脑已安装python并且已安装pygame库
+### 1.在开始之前，确保你的电脑已安装python并且已安装pygame和pillow库
 
-- 在命令行中安装pygame库：
+- 在命令行中安装pygame和pillow库：
 
-      pip install pygame
-
-    或
-
-      python -m pip install pygame
+      python -m pip install -r requirements.txt
     
 ### 2.运行游戏
 
@@ -65,15 +61,11 @@ pygame官方wiki： [https://www.pygame.org/news](https://www.pygame.org/news)
 
 ### 1.Before You Start
 
-Ensure your computer has Python installed and the Pygame library is set up.
+Ensure your computer have Python and pillow installed and the Pygame library is set up.
 
-- Install Pygame via command line:
+- Install Pygame and pillow via command line:
 
-      pip install pygame
-
-    Or
-
-      python -m pip install pygame
+      python -m pip install -r requirements.txt
 
 ### 2.Run the Game
 
