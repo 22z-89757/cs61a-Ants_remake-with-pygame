@@ -1,4 +1,5 @@
 import pygame
+from PIL import Image, ImageSequence
 
 
 class GameState:
@@ -24,7 +25,58 @@ def get_row(position):
 row_y_dic = {'row1': 450, 'row2': 630, 'row3': 810, 'row4': 990}
 
 
-class Insect(pygame.sprite.Sprite):
+class Rows:
+    """Mixin to provide row-related helpers for insects.
+
+    Use `set_row_from_position(position)` when you have a position,
+    or `set_row(row_name)` when you already know the row string.
+    """
+    def set_row(self, row_name):
+        self.row = row_name
+
+    def set_row_from_position(self, position):
+        self.row = get_row(position)
+
+def load_frames(image_path, size=None):
+    """Load frames from an image file.
+
+    - If Pillow (PIL) is available and the image has multiple frames (e.g. GIF),
+      extract each frame and convert to a pygame Surface.
+    - Otherwise fall back to `pygame.image.load` and return a single-frame list.
+
+    `size` is an (w,h) tuple to scale frames to; if None, leave original size.
+    """
+    frames = []
+    try:
+        pil_img = Image.open(image_path)
+    except Exception:
+        # fallback to pygame single frame if PIL cannot open
+        surf = pygame.image.load(image_path).convert_alpha()
+        if size:
+            surf = pygame.transform.scale(surf, size)
+        return [surf]
+
+    for frame in ImageSequence.Iterator(pil_img):
+        frame = frame.convert('RGBA')
+        mode = frame.mode
+        size_pil = frame.size
+        data = frame.tobytes()
+        surf = pygame.image.fromstring(data, size_pil, mode).convert_alpha()
+        if size:
+            surf = pygame.transform.scale(surf, size)
+        frames.append(surf)
+
+    if not frames:
+        # empty? fall back
+        surf = pygame.image.load(image_path).convert_alpha()
+        if size:
+            surf = pygame.transform.scale(surf, size)
+        return [surf]
+
+    return frames
+
+
+class Insect(Rows, pygame.sprite.Sprite):
 
     insert_id = 0
 
@@ -38,8 +90,43 @@ class Ants(Insect):
 
     food_cost = 0
 
-    def __init__(self, health = 1):
+    # subclasses should set these two class attributes
+    image_path = None
+    image_size = (130, 130)
+
+    def __init__(self, position, health=1):
         super().__init__(health)
+        # common setup for all Ants: load image, set rect/position, plant time and row
+        if not getattr(self, 'image_path', None):
+            raise RuntimeError(f"Ant subclass {self.__class__.__name__} must define 'image_path'")
+        # load frames (GIF support) and set up animation
+        self.frames = load_frames(self.image_path, self.image_size)
+        self.frame_index = 0
+        self.anim_interval = getattr(self, 'anim_interval', 150)  # ms per frame
+        self.last_anim_time = pygame.time.get_ticks()
+        self.image = self.frames[self.frame_index]
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+        self.position = position
+        self.plant_time = pygame.time.get_ticks()
+        # use Rows helper to set row consistently
+        self.set_row_from_position(position)
+
+    def animate(self, current_time=None):
+        """Advance animation based on elapsed time.
+
+        If current_time is given (ms), use it; otherwise use pygame.time.get_ticks().
+        """
+        if not getattr(self, 'frames', None) or len(self.frames) <= 1:
+            return
+        now = current_time if current_time is not None else pygame.time.get_ticks()
+        if now - self.last_anim_time >= self.anim_interval:
+            self.frame_index = (self.frame_index + 1) % len(self.frames)
+            center = self.rect.center
+            self.image = self.frames[self.frame_index]
+            self.rect = self.image.get_rect()
+            self.rect.center = center
+            self.last_anim_time = now
 
     def place_ants(self):
         GameState.food -= self.food_cost
@@ -52,20 +139,25 @@ class Thrower(Ants):
     food_cost = 3  #property override
     damage = 1
 
+    # specify image info as class attributes so parent can initialize
+    image_path = "assets/ants/Thrower.gif"
+    image_size = (130, 130)
+
     def __init__(self, position):
-        super().__init__()
-        self.image = pygame.image.load("assets/ants/Thrower.gif")
-        self.image = pygame.transform.scale(self.image, (130, 130))
-        self.rect = self.image.get_rect()
-        self.rect.center = position
-        self.position = position
-        self.plant_time = pygame.time.get_ticks()
-        self.row = get_row(position)
+        super().__init__(position)
 
     def update(self,current_time):
+        # animate first
+        try:
+            self.animate(current_time)
+        except Exception:
+            pass
+
         if current_time - self.plant_time >= 4000:
-            # noinspection PyTypeChecker
-            bullet_group.add(Bullet(self.position))
+            # only fire if there is at least one Bee in the same row
+            if any(getattr(b, 'row', None) == self.row for b in Bees_group):
+                # noinspection PyTypeChecker
+                bullet_group.add(Bullet(self.position))
             self.plant_time = current_time
 
 #create Thrower's group
@@ -77,18 +169,20 @@ class Harvester(Ants):
     name = "Harvester"
     food_cost = 2
 
+    image_path = "assets/ants/Harvester.gif"
+    image_size = (130, 130)
+
     def __init__(self, position):
-        super().__init__()
-        self.image = pygame.image.load("assets/ants/Harvester.gif")
-        self.image = pygame.transform.scale(self.image, (130, 130))
-        self.rect = self.image.get_rect()
-        self.rect.center = position
-        self.plant_time = pygame.time.get_ticks()
-        self.position = position
-        self.row = get_row(position)
+        super().__init__(position)
 
     #get food logic
     def update(self,current_time):
+        # animate first
+        try:
+            self.animate(current_time)
+        except Exception:
+            pass
+
         #current_time was get in main game loop
         if current_time - self.plant_time >= 6000:
             GameState.food += 1
@@ -109,14 +203,27 @@ class Bees(Insect):
 
     def __init__(self, row, health = 3):
         super().__init__(health)
-        self.image = pygame.image.load("assets/bees/Bee.gif")
-        self.image = pygame.transform.scale(self.image, (150, 150))
+        # support animated bee GIFs
+        self.image_path = "assets/bees/Bee.gif"
+        self.image_size = (150, 150)
+        self.frames = load_frames(self.image_path, self.image_size)
+        self.frame_index = 0
+        self.anim_interval = getattr(self, 'anim_interval', 120)
+        self.last_anim_time = pygame.time.get_ticks()
+        self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect()
-        self.row = row
+        # set row via Rows mixin and position the bee accordingly
+        self.set_row(row)
         self.rect.bottomleft = (1620, row_y_dic[self.row])
         self.born_time = pygame.time.get_ticks()
 
     def update(self):
+        # animate
+        try:
+            self.animate()
+        except Exception:
+            pass
+
         self.rect.x -= self.speed
         if self.health <= 0:
             self.kill()
@@ -182,7 +289,7 @@ class Bullet(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (100, 100))
         self.rect = self.image.get_rect()
         self.rect.bottomleft  = position
-        self.speed = 3
+        self.speed = 6
 
     def update(self):
         self.rect.x += self.speed
@@ -192,6 +299,5 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
         if self.rect.left >= 1620:
             self.kill()
-        self.rect.x += self.speed
 
 bullet_group = pygame.sprite.Group()
