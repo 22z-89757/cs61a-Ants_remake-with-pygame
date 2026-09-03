@@ -1,10 +1,13 @@
 from object import *
 import pygame
 import random
+import ctypes
+
+ctypes.windll.user32.SetProcessDPIAware()
 
 # initialize
 pygame.init()
-screen = pygame.display.set_mode((1920,1080))
+screen = pygame.display.set_mode((1920,1080), pygame.RESIZABLE)
 pygame.display.set_caption("Ants-remake by 22z")
 clock = pygame.time.Clock()
 
